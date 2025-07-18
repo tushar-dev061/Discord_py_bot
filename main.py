@@ -44,7 +44,7 @@ async def on_ready():
 @client.event
 async def on_message(message):
     source_channel_id = 1360963446165995530
-    target_channel_id = 1302143373947174925
+    target_channel_id = 1302143379387187233
 
     if message.channel.id == source_channel_id and not message.author.bot:
         target_channel = client.get_channel(target_channel_id)
