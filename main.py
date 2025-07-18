@@ -27,10 +27,11 @@ async def load_extensions():
 async def on_ready():
     print(f'Logged in as {client.user} (ID: {client.user.id})')
     print('------')
+    await client.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name="your server"))
 
     # Start copying messages continuously from source to target channel
     source_channel_id = 1302143373947174925
-    target_channel_id = 1395726155776266311
+    target_channel_id = 1302143379387187233
     source_channel = client.get_channel(source_channel_id)
     target_channel = client.get_channel(target_channel_id)
 
