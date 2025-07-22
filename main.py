@@ -27,6 +27,8 @@ async def load_extensions():
 async def on_ready():
     print(f'Logged in as {client.user} (ID: {client.user.id})')
     print('------')
+
+    # Set bot presence to watching "your server"
     await client.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name="your server"))
 
     # Start copying messages continuously from source to target channel
@@ -62,6 +64,14 @@ async def on_message(message):
             await target_channel.send(content, files=files)
         except Exception as e:
             print(f"Failed to copy message: {e}")
+
+    # Reply on direct mentions, excluding @here and @everyone
+    if not message.author.bot and not message.mention_everyone and client.user in message.mentions:
+        reply_msg = f"Hii {message.author.mention} use -- help to get commands list"
+        try:
+            await message.channel.send(reply_msg)
+        except Exception as e:
+            print(f"Failed to send mention reply: {e}")
 
     await client.process_commands(message)
 
