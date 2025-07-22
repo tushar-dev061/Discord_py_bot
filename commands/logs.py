@@ -44,7 +44,11 @@ class Logs(commands.Cog):
     @commands.group(name='vlog', invoke_without_command=True)
     async def vlog(self, ctx):
         """Voice log commands group."""
-        await ctx.send("Use 'vlog en #channel' to enable or 'vlog di' to disable voice logs.")
+        embed = discord.Embed(
+            description="Use 'vlog en #channel' to enable or 'vlog di' to disable voice logs.",
+            color=discord.Color.blue()
+        )
+        await ctx.send(embed=embed)
 
     @vlog.command(name='en')
     @commands.has_permissions(manage_channels=True)
@@ -55,7 +59,11 @@ class Logs(commands.Cog):
             self.config[guild_id] = {}
         self.config[guild_id]['voice'] = channel.id
         self.save_config()
-        await ctx.send(f"Voice logs enabled in {channel.mention}")
+        embed = discord.Embed(
+            description=f"Voice logs enabled in {channel.mention}",
+            color=discord.Color.green()
+        )
+        await ctx.send(embed=embed)
 
     @vlog.command(name='di')
     @commands.has_permissions(manage_channels=True)
@@ -65,9 +73,17 @@ class Logs(commands.Cog):
         if guild_id in self.config and 'voice' in self.config[guild_id]:
             del self.config[guild_id]['voice']
             self.save_config()
-            await ctx.send("Voice logs disabled.")
+            embed = discord.Embed(
+                description="Voice logs disabled.",
+                color=discord.Color.red()
+            )
+            await ctx.send(embed=embed)
         else:
-            await ctx.send("Voice logs are not enabled.")
+            embed = discord.Embed(
+                description="Voice logs are not enabled.",
+                color=discord.Color.red()
+            )
+            await ctx.send(embed=embed)
 
     @commands.Cog.listener()
     async def on_voice_state_update(self, member, before, after):
@@ -79,79 +95,41 @@ class Logs(commands.Cog):
             log_channel = member.guild.get_channel(channel_id)
             if log_channel:
                 if before.channel is None and after.channel is not None:
-                    await log_channel.send(f"{member.display_name} joined voice channel {after.channel.name}.")
+                    embed = discord.Embed(
+                        title="Voice Channel Joined",
+                        description=f"{member.display_name} joined voice channel {after.channel.name}.",
+                        color=discord.Color.green()
+                    )
+                    embed.set_footer(text=f"Time: {discord.utils.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}")
+                    await log_channel.send(embed=embed)
                 elif before.channel is not None and after.channel is None:
-                    await log_channel.send(f"{member.display_name} left voice channel {before.channel.name}.")
+                    embed = discord.Embed(
+                        title="Voice Channel Left",
+                        description=f"{member.display_name} left voice channel {before.channel.name}.",
+                        color=discord.Color.red()
+                    )
+                    embed.set_footer(text=f"Time: {discord.utils.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}")
+                    await log_channel.send(embed=embed)
                 elif before.channel is not None and after.channel is not None:
-                    await log_channel.send(f"{member.display_name} moved from voice channel {before.channel.name} to {after.channel.name}.")
+                    embed = discord.Embed(
+                        title="Voice Channel Moved",
+                        description=f"{member.display_name} moved from voice channel {before.channel.name} to {after.channel.name}.",
+                        color=discord.Color.orange()
+                    )
+                    embed.set_footer(text=f"Time: {discord.utils.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}")
+                    await log_channel.send(embed=embed)
 
     # Additional commands and listeners for message deleted, message dump, member join/leave, invited by can be added similarly.
-
-    @commands.group(name='dump', invoke_without_command=True)
-    async def dump(self, ctx):
-        """Message dump commands group."""
-        await ctx.send("Use 'dump setup #channel' to set dump log channel, 'dump en #channel' to enable dump from a channel, 'dump di #channel' to disable dump from a channel.")
-
-    @dump.command(name='setup')
-    @commands.has_permissions(manage_channels=True)
-    async def dump_setup(self, ctx, channel: discord.TextChannel):
-        """Set the dump log channel for the server."""
-        guild_id = ctx.guild.id
-        if guild_id not in self.config:
-            self.config[guild_id] = {}
-        self.config[guild_id]['dump_log_channel'] = channel.id
-        self.save_config()
-        await ctx.send(f"Dump log channel set to {channel.mention}")
-
-    @dump.command(name='en')
-    @commands.has_permissions(manage_channels=True)
-    async def dump_enable(self, ctx, channel: discord.TextChannel):
-        """Enable message dumping from a specific channel."""
-        guild_id = ctx.guild.id
-        if guild_id not in self.config:
-            self.config[guild_id] = {}
-        if 'dump_channels' not in self.config[guild_id]:
-            self.config[guild_id]['dump_channels'] = []
-        if channel.id not in self.config[guild_id]['dump_channels']:
-            self.config[guild_id]['dump_channels'].append(channel.id)
-            self.save_config()
-            await ctx.send(f"Message dumping enabled for {channel.mention}")
-        else:
-            await ctx.send(f"Message dumping is already enabled for {channel.mention}")
-
-    @dump.command(name='di')
-    @commands.has_permissions(manage_channels=True)
-    async def dump_disable(self, ctx, channel: discord.TextChannel):
-        """Disable message dumping from a specific channel."""
-        guild_id = ctx.guild.id
-        if guild_id in self.config and 'dump_channels' in self.config[guild_id]:
-            if channel.id in self.config[guild_id]['dump_channels']:
-                self.config[guild_id]['dump_channels'].remove(channel.id)
-                self.save_config()
-                await ctx.send(f"Message dumping disabled for {channel.mention}")
-                return
-        await ctx.send(f"Message dumping is not enabled for {channel.mention}")
-
-    @commands.Cog.listener()
-    async def on_message(self, message):
-        if message.author.bot:
-            return
-        guild_id = message.guild.id if message.guild else None
-        if not guild_id:
-            return
-        if guild_id in self.config and 'dump_channels' in self.config[guild_id]:
-            if message.channel.id in self.config[guild_id]['dump_channels']:
-                dump_channel_id = self.config[guild_id].get('dump_log_channel')
-                if dump_channel_id:
-                    dump_channel = message.guild.get_channel(dump_channel_id)
-                    if dump_channel:
-                        content = message.content or "[No content]"
-                        await dump_channel.send(f"[{message.channel.name}] {message.author.display_name}: {content}")
 
     @commands.group(name='mlog', invoke_without_command=True)
     async def mlog(self, ctx):
         """Message log commands group."""
-        await ctx.send("Use 'mlog en #channel' to enable or 'mlog di' to disable message delete logs.")
+        embed = discord.Embed(
+            description="Use 'mlog en #channel' to enable or 'mlog di' to disable message delete logs.",
+            color=discord.Color.blue()
+        )
+        embed.set_footer(text=f"Time: {discord.utils.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}")
+        await ctx.send(embed=embed)
 
     @mlog.command(name='en')
     @commands.has_permissions(manage_channels=True)
@@ -162,7 +140,12 @@ class Logs(commands.Cog):
             self.config[guild_id] = {}
         self.config[guild_id]['message_delete'] = channel.id
         self.save_config()
-        await ctx.send(f"Message delete logs enabled in {channel.mention}")
+        embed = discord.Embed(
+            description=f"Message delete logs enabled in {channel.mention}",
+            color=discord.Color.green()
+        )
+        embed.set_footer(text=f"Time: {discord.utils.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}")
+        await ctx.send(embed=embed)
 
     @mlog.command(name='di')
     @commands.has_permissions(manage_channels=True)
@@ -172,9 +155,19 @@ class Logs(commands.Cog):
         if guild_id in self.config and 'message_delete' in self.config[guild_id]:
             del self.config[guild_id]['message_delete']
             self.save_config()
-            await ctx.send("Message delete logs disabled.")
+            embed = discord.Embed(
+                description="Message delete logs disabled.",
+                color=discord.Color.red()
+            )
+            embed.set_footer(text=f"Time: {discord.utils.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}")
+            await ctx.send(embed=embed)
         else:
-            await ctx.send("Message delete logs are not enabled.")
+            embed = discord.Embed(
+                description="Message delete logs are not enabled.",
+                color=discord.Color.red()
+            )
+            embed.set_footer(text=f"Time: {discord.utils.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}")
+            await ctx.send(embed=embed)
 
     @commands.Cog.listener()
     async def on_message_delete(self, message):
@@ -185,7 +178,15 @@ class Logs(commands.Cog):
             if log_channel:
                 author = message.author
                 content = message.content or "[No content]"
-                await log_channel.send(f"Message deleted in {message.channel.mention} by {author.display_name}: {content}")
+                embed = discord.Embed(
+                    title="Message Deleted",
+                    color=discord.Color.red()
+                )
+                embed.set_footer(text=f"Time: {discord.utils.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}")
+                embed.add_field(name="Channel", value=message.channel.mention, inline=True)
+                embed.add_field(name="Author", value=author.display_name, inline=True)
+                embed.add_field(name="Content", value=content, inline=False)
+                await log_channel.send(embed=embed)
 
     @commands.command(name='backup')
     @commands.has_permissions(manage_messages=True)
@@ -216,7 +217,12 @@ class Logs(commands.Cog):
     @commands.group(name='jlog', invoke_without_command=True)
     async def jlog(self, ctx):
         """Join/leave log commands group."""
-        await ctx.send("Use 'jlog en #channel' to enable or 'jlog di' to disable join/leave logs.")
+        embed = discord.Embed(
+            description="Use 'jlog en #channel' to enable or 'jlog di' to disable join/leave logs.",
+            color=discord.Color.blue()
+        )
+        embed.set_footer(text=f"Time: {discord.utils.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}")
+        await ctx.send(embed=embed)
 
     @jlog.command(name='en')
     @commands.has_permissions(manage_channels=True)
@@ -227,7 +233,12 @@ class Logs(commands.Cog):
             self.config[guild_id] = {}
         self.config[guild_id]['join_leave'] = channel.id
         self.save_config()
-        await ctx.send(f"Join/leave logs enabled in {channel.mention}")
+        embed = discord.Embed(
+            description=f"Join/leave logs enabled in {channel.mention}",
+            color=discord.Color.green()
+        )
+        embed.set_footer(text=f"Time: {discord.utils.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}")
+        await ctx.send(embed=embed)
 
     @jlog.command(name='di')
     @commands.has_permissions(manage_channels=True)
@@ -237,9 +248,19 @@ class Logs(commands.Cog):
         if guild_id in self.config and 'join_leave' in self.config[guild_id]:
             del self.config[guild_id]['join_leave']
             self.save_config()
-            await ctx.send("Join/leave logs disabled.")
+            embed = discord.Embed(
+                description="Join/leave logs disabled.",
+                color=discord.Color.red()
+            )
+            embed.set_footer(text=f"Time: {discord.utils.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}")
+            await ctx.send(embed=embed)
         else:
-            await ctx.send("Join/leave logs are not enabled.")
+            embed = discord.Embed(
+                description="Join/leave logs are not enabled.",
+                color=discord.Color.red()
+            )
+            embed.set_footer(text=f"Time: {discord.utils.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}")
+            await ctx.send(embed=embed)
 
     @commands.Cog.listener()
     async def on_member_join(self, member):
@@ -248,7 +269,13 @@ class Logs(commands.Cog):
             channel_id = self.config[guild_id]['join_leave']
             log_channel = member.guild.get_channel(channel_id)
             if log_channel:
-                await log_channel.send(f"{member.display_name} has joined the server.")
+                embed = discord.Embed(
+                    title="Member Joined",
+                    description=f"{member.display_name} has joined the server.",
+                    color=discord.Color.green()
+                )
+                embed.set_footer(text=f"Time: {discord.utils.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}")
+                await log_channel.send(embed=embed)
 
     @commands.Cog.listener()
     async def on_member_remove(self, member):
@@ -257,12 +284,23 @@ class Logs(commands.Cog):
             channel_id = self.config[guild_id]['join_leave']
             log_channel = member.guild.get_channel(channel_id)
             if log_channel:
-                await log_channel.send(f"{member.display_name} has left the server.")
+                embed = discord.Embed(
+                    title="Member Left",
+                    description=f"{member.display_name} has left the server.",
+                    color=discord.Color.red()
+                )
+                embed.set_footer(text=f"Time: {discord.utils.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}")
+                await log_channel.send(embed=embed)
 
     @commands.group(name='ilog', invoke_without_command=True)
     async def ilog(self, ctx):
         """Invite log commands group."""
-        await ctx.send("Use 'ilog en #channel' to enable or 'ilog di' to disable invite logs.")
+        embed = discord.Embed(
+            description="Use 'ilog en #channel' to enable or 'ilog di' to disable invite logs.",
+            color=discord.Color.blue()
+        )
+        embed.set_footer(text=f"Time: {discord.utils.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}")
+        await ctx.send(embed=embed)
 
     @ilog.command(name='en')
     @commands.has_permissions(manage_channels=True)
@@ -273,7 +311,12 @@ class Logs(commands.Cog):
             self.config[guild_id] = {}
         self.config[guild_id]['invite'] = channel.id
         self.save_config()
-        await ctx.send(f"Invite logs enabled in {channel.mention}")
+        embed = discord.Embed(
+            description=f"Invite logs enabled in {channel.mention}",
+            color=discord.Color.green()
+        )
+        embed.set_footer(text=f"Time: {discord.utils.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}")
+        await ctx.send(embed=embed)
 
     @ilog.command(name='di')
     @commands.has_permissions(manage_channels=True)
@@ -283,9 +326,19 @@ class Logs(commands.Cog):
         if guild_id in self.config and 'invite' in self.config[guild_id]:
             del self.config[guild_id]['invite']
             self.save_config()
-            await ctx.send("Invite logs disabled.")
+            embed = discord.Embed(
+                description="Invite logs disabled.",
+                color=discord.Color.red()
+            )
+            embed.set_footer(text=f"Time: {discord.utils.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}")
+            await ctx.send(embed=embed)
         else:
-            await ctx.send("Invite logs are not enabled.")
+            embed = discord.Embed(
+                description="Invite logs are not enabled.",
+                color=discord.Color.red()
+            )
+            embed.set_footer(text=f"Time: {discord.utils.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}")
+            await ctx.send(embed=embed)
 
     @commands.Cog.listener()
     async def on_member_join(self, member):
@@ -297,7 +350,13 @@ class Logs(commands.Cog):
                 # Invite tracking requires cache of invites
                 invites_before = await member.guild.invites()
                 # This simplistic approach may not be accurate; advanced tracking requires more state management
-                await log_channel.send(f"{member.display_name} joined the server. (Invite tracking not fully implemented)")
+                embed = discord.Embed(
+                    title="Member Joined (Invite)",
+                    description=f"{member.display_name} joined the server. (Invite tracking not fully implemented)",
+                    color=discord.Color.green()
+                )
+                embed.set_footer(text=f"Time: {discord.utils.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}")
+                await log_channel.send(embed=embed)
 
 async def setup(bot):
     await bot.add_cog(Logs(bot))
