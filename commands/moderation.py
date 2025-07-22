@@ -5,13 +5,15 @@ class Moderation(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.command(name='avatar')
+    @commands.command(name='avatar', aliases=['av'])
     async def avatar(self, ctx, member: discord.Member = None):
         """Shows the avatar of the user or specified member."""
         member = member or ctx.author
-        await ctx.send(f"{member.display_name}'s avatar: {member.avatar.url}")
+        embed = discord.Embed(title=f"{member.display_name}'s avatar")
+        embed.set_image(url=member.avatar.url)
+        await ctx.send(embed=embed)
 
-    @commands.command(name='ban')
+    @commands.command(name='ban', aliases=['b'])
     @commands.has_permissions(ban_members=True)
     async def ban(self, ctx, member: discord.Member, *, reason=None):
         """Ban a member from the server."""
@@ -21,7 +23,7 @@ class Moderation(commands.Cog):
         except Exception as e:
             await ctx.send(f'Failed to ban {member.mention}. Error: {e}')
 
-    @commands.command(name='kick')
+    @commands.command(name='kick', aliases=['k'])
     @commands.has_permissions(kick_members=True)
     async def kick(self, ctx, member: discord.Member, *, reason=None):
         """Kick a member from the server."""
@@ -31,7 +33,7 @@ class Moderation(commands.Cog):
         except Exception as e:
             await ctx.send(f'Failed to kick {member.mention}. Error: {e}')
 
-    @commands.command(name='purge')
+    @commands.command(name='purge', aliases=['clear', 'prune'])
     @commands.has_permissions(manage_messages=True)
     async def purge(self, ctx, amount: int):
         """Bulk delete messages in the channel."""
@@ -41,7 +43,7 @@ class Moderation(commands.Cog):
         except Exception as e:
             await ctx.send(f'Failed to delete messages. Error: {e}')
 
-    @commands.command(name='mute')
+    @commands.command(name='mute', aliases=['m'])
     @commands.has_permissions(manage_roles=True)
     async def mute(self, ctx, member: discord.Member, *, reason=None):
         """Mute a member in the server."""
@@ -59,6 +61,23 @@ class Moderation(commands.Cog):
 
         await member.add_roles(muted_role, reason=reason)
         await ctx.send(f'{member.mention} has been muted.')
+        try:
+            print(f"Attempting to send DM to {member} after muting")
+            embed = discord.Embed(
+                title="You have been muted",
+                description=(
+                    f"You have been muted in {ctx.guild.name}.\n\n"
+                    "Describe your reason for this conduct, your message will be sent to the moderators.\n"
+                    "you will be unmuted as soon as we confirm your reason.\n"
+                    "Please be patient and wait for a moderator to respond."
+                ),
+                color=discord.Color.red()
+            )
+            await member.send(embed=embed)
+            print(f"DM sent to {member}")
+        except Exception as e:
+            print(f"Failed to send DM to {member}: {e}")
+            await ctx.send(f"Could not send DM to {member.mention}. They might have DMs disabled.")
 
 
     @commands.command(name='ping', aliases=['p', 'latency'])
@@ -67,7 +86,7 @@ class Moderation(commands.Cog):
         latency = self.bot.latency * 1000  # Convert to milliseconds
         await ctx.send(f'Pong! Latency: {latency:.2f} ms')
 
-    @commands.command(name='unban')
+    @commands.command(name='unban', aliases=['ub'])
     @commands.has_permissions(ban_members=True)
     async def unban(self, ctx, user: discord.User, *, reason=None):
         """Unban a user from the server."""
@@ -82,7 +101,7 @@ class Moderation(commands.Cog):
         except Exception as e:
             await ctx.send(f'Failed to unban {user.mention}. Error: {e}')
 
-    @commands.command(name='unmute')
+    @commands.command(name='unmute', aliases=['um'])
     @commands.has_permissions(manage_roles=True)
     async def unmute(self, ctx, member: discord.Member):
         """Unmute a member in the server."""
@@ -100,7 +119,7 @@ class Moderation(commands.Cog):
         except Exception as e:
             await ctx.send(f'Failed to unmute {member.mention}. Error: {e}')
 
-    @commands.command(name='warn')
+    @commands.command(name='warn', aliases=['w'])
     @commands.has_permissions(manage_messages=True)
     async def warn(self, ctx, member: discord.Member, *, reason=None):
         """Warn a member in the server."""
@@ -113,7 +132,7 @@ class Moderation(commands.Cog):
         except Exception as e:
             await ctx.send(f'Failed to warn {member.mention}. Error: {e}')
 
-    @commands.command(name='slomo_enable')
+    @commands.command(name='slomo_enable', aliases=['sm_on'])
     @commands.has_permissions(manage_channels=True)
     async def slomo_enable(self, ctx, delay: int):
         """Enable slow mode in the channel with the specified delay in seconds."""
@@ -123,7 +142,7 @@ class Moderation(commands.Cog):
         except Exception as e:
             await ctx.send(f'Failed to enable slow mode. Error: {e}')
 
-    @commands.command(name='slomo_disable')
+    @commands.command(name='slomo_disable', aliases=['sm_off'])
     @commands.has_permissions(manage_channels=True)
     async def slomo_disable(self, ctx):
         """Disable slow mode in the channel."""
@@ -132,6 +151,44 @@ class Moderation(commands.Cog):
             await ctx.send('Slow mode disabled.')
         except Exception as e:
             await ctx.send(f'Failed to disable slow mode. Error: {e}')
+
+    @commands.command(name='fixmuteperms')
+    @commands.has_permissions(manage_roles=True, manage_channels=True)
+    async def fixmuteperms(self, ctx):
+        """Disable 'view channel' and 'send messages' permissions for the Muted role in all channels."""
+        guild = ctx.guild
+        muted_role = discord.utils.get(guild.roles, name='Muted')
+        if not muted_role:
+            await ctx.send("Muted role does not exist.")
+            return
+        try:
+            for channel in guild.channels:
+                await channel.set_permissions(muted_role, view_channel=False, send_messages=False)
+            await ctx.send("Updated 'view channel' and 'send messages' permissions for Muted role in all channels.")
+        except Exception as e:
+            await ctx.send(f"Failed to update permissions. Error: {e}")
+
+    @commands.command(name='lock')
+    @commands.has_permissions(manage_channels=True)
+    async def lock(self, ctx):
+        """Lock the current channel by disabling send messages for everyone."""
+        everyone_role = ctx.guild.default_role
+        try:
+            await ctx.channel.set_permissions(everyone_role, send_messages=False)
+            await ctx.send(f"{ctx.channel.mention} has been locked.")
+        except Exception as e:
+            await ctx.send(f"Failed to lock the channel. Error: {e}")
+
+    @commands.command(name='unlock')
+    @commands.has_permissions(manage_channels=True)
+    async def unlock(self, ctx):
+        """Unlock the current channel by enabling send messages for everyone."""
+        everyone_role = ctx.guild.default_role
+        try:
+            await ctx.channel.set_permissions(everyone_role, send_messages=True)
+            await ctx.send(f"{ctx.channel.mention} has been unlocked.")
+        except Exception as e:
+            await ctx.send(f"Failed to unlock the channel. Error: {e}")
 
 async def setup(bot):
     await bot.add_cog(Moderation(bot))
