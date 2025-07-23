@@ -152,22 +152,6 @@ class Moderation(commands.Cog):
         except Exception as e:
             await ctx.send(f'Failed to disable slow mode. Error: {e}')
 
-    @commands.command(name='fixmuteperms')
-    @commands.has_permissions(manage_roles=True, manage_channels=True)
-    async def fixmuteperms(self, ctx):
-        """Disable 'view channel' and 'send messages' permissions for the Muted role in all channels."""
-        guild = ctx.guild
-        muted_role = discord.utils.get(guild.roles, name='Muted')
-        if not muted_role:
-            await ctx.send("Muted role does not exist.")
-            return
-        try:
-            for channel in guild.channels:
-                await channel.set_permissions(muted_role, view_channel=False, send_messages=False)
-            await ctx.send("Updated 'view channel' and 'send messages' permissions for Muted role in all channels.")
-        except Exception as e:
-            await ctx.send(f"Failed to update permissions. Error: {e}")
-
     @commands.command(name='lock')
     @commands.has_permissions(manage_channels=True)
     async def lock(self, ctx):
