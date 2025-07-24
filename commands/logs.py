@@ -36,10 +36,14 @@ def write_logs_config(config):
 class Logs(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        print("Loading Logs cog and reading config...")
         self.config = read_logs_config()
+        print(f"Loaded config: {self.config}")
 
     def save_config(self):
+        print("Saving logs config...")
         write_logs_config(self.config)
+        print("Logs config saved.")
 
     @commands.group(name='vlog', invoke_without_command=True)
     async def vlog(self, ctx):
