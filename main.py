@@ -9,19 +9,21 @@ intents.message_content = True
 intents.guilds = True
 intents.members = True
 
-client = commands.Bot(command_prefix='--', intents=intents, help_command=None)
+client = commands.Bot(command_prefix=',', intents=intents, help_command=None)
 B.b()  # Start the Flask server in a separate thread
 async def load_extensions():
-    print("Starting to load command extensions...")
-    for filename in os.listdir('./commands'):
-        if filename.endswith('.py') and filename != '__init__.py':
-            extension = f'commands.{filename[:-3]}'
-            try:
-                await client.load_extension(extension)
-                print(f'Loaded extension {extension}')
-            except Exception as e:
-                print(f'Failed to load extension {extension}: {e}')
-    print("Finished loading command extensions.")
+        print("Starting to load command extensions...")
+        for filename in os.listdir('./commands'):
+            if filename.endswith('.py') and filename != '__init__.py':
+                extension = f'commands.{filename[:-3]}'
+                try:
+                    await client.load_extension(extension)
+                    print(f'Loaded extension {extension}')
+                    if extension == 'commands.logs':
+                        print("Logs extension loaded successfully.")
+                except Exception as e:
+                    print(f'Failed to load extension {extension}: {e}')
+        print("Finished loading command extensions.")
 
 @client.event
 async def on_ready():
@@ -29,7 +31,7 @@ async def on_ready():
     print('------')
 
     # Set bot presence to watching "your server"
-    await client.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name="your server"))
+    await client.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name="UNIQUE"))
 
     # Start copying messages continuously from source to target channel
     source_channel_id = 1302143373947174925
