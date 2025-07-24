@@ -132,7 +132,7 @@ async def help_command(ctx):
             cogs[cog_name].append(command)
     for cog_name, commands_list in cogs.items():
         sorted_commands = sorted(commands_list, key=lambda cmd: cmd.name)
-        command_descriptions = "\n".join(f'!{cmd.name} - {cmd.help or "No description"}' for cmd in sorted_commands)
+        command_descriptions = "\n".join(f'-{cmd.name} - {cmd.help or "No description"}' for cmd in sorted_commands)
         embed.add_field(name=cog_name, value=command_descriptions, inline=False)
     await ctx.send(embed=embed)
 
