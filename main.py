@@ -9,7 +9,7 @@ intents.message_content = True
 intents.guilds = True
 intents.members = True
 
-client = commands.Bot(command_prefix=',', intents=intents, help_command=None)
+client = commands.Bot(command_prefix='-', intents=intents, help_command=None)
 B.b()  # Start the Flask server in a separate thread
 async def load_extensions():
         print("Starting to load command extensions...")
