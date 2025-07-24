@@ -2,7 +2,7 @@ from discord.ext import commands
 import re
 import discord
 
-class EmojiCommands(commands.Cog):
+class UtilityCommands(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
@@ -51,4 +51,4 @@ class EmojiCommands(commands.Cog):
         await ctx.send(f"Embed message sent to {channel.mention}")
 
 async def setup(bot):
-    await bot.add_cog(EmojiCommands(bot))
+    await bot.add_cog(UtilityCommands(bot))
