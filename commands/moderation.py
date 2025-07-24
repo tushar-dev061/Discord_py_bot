@@ -5,13 +5,7 @@ class Moderation(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.command(name='avatar', aliases=['av'])
-    async def avatar(self, ctx, member: discord.Member = None):
-        """Shows the avatar of the user or specified member."""
-        member = member or ctx.author
-        embed = discord.Embed(title=f"{member.display_name}'s avatar")
-        embed.set_image(url=member.avatar.url)
-        await ctx.send(embed=embed)
+
 
     @commands.command(name='ban', aliases=['b'])
     @commands.has_permissions(ban_members=True)
@@ -20,6 +14,15 @@ class Moderation(commands.Cog):
         try:
             await member.ban(reason=reason)
             await ctx.send(f'{member.mention} has been banned. Reason: {reason}')
+            try:
+                embed = discord.Embed(
+                    title="You have been banned",
+                    description=f"You have been banned from {ctx.guild.name}." + (f"\nReason: {reason}" if reason else ""),
+                    color=discord.Color.red()
+                )
+                await member.send(embed=embed)
+            except Exception as e:
+                await ctx.send(f"Could not send DM to {member.mention}. They might have DMs disabled.")
         except Exception as e:
             await ctx.send(f'Failed to ban {member.mention}. Error: {e}')
 
@@ -30,6 +33,15 @@ class Moderation(commands.Cog):
         try:
             await member.kick(reason=reason)
             await ctx.send(f'{member.mention} has been kicked. Reason: {reason}')
+            try:
+                embed = discord.Embed(
+                    title="You have been kicked",
+                    description=f"You have been kicked from {ctx.guild.name}." + (f"\nReason: {reason}" if reason else ""),
+                    color=discord.Color.orange()
+                )
+                await member.send(embed=embed)
+            except Exception as e:
+                await ctx.send(f"Could not send DM to {member.mention}. They might have DMs disabled.")
         except Exception as e:
             await ctx.send(f'Failed to kick {member.mention}. Error: {e}')
 
@@ -80,24 +92,27 @@ class Moderation(commands.Cog):
             await ctx.send(f"Could not send DM to {member.mention}. They might have DMs disabled.")
 
 
-    @commands.command(name='ping', aliases=['p', 'latency'])
-    async def ping(self, ctx):
-        """Check the bot's latency."""
-        latency = self.bot.latency * 1000  # Convert to milliseconds
-        await ctx.send(f'Pong! Latency: {latency:.2f} ms')
-
     @commands.command(name='unban', aliases=['ub'])
     @commands.has_permissions(ban_members=True)
     async def unban(self, ctx, user: discord.User, *, reason=None):
         """Unban a user from the server."""
         try:
-            banned_users = await ctx.guild.bans()
+            banned_users = [entry async for entry in ctx.guild.bans()]
             user_entry = next((entry for entry in banned_users if entry.user.id == user.id), None)
             if user_entry is None:
                 await ctx.send(f'{user.mention} is not banned.')
                 return
             await ctx.guild.unban(user, reason=reason)
             await ctx.send(f'{user.mention} has been unbanned. Reason: {reason}')
+            try:
+                embed = discord.Embed(
+                    title="You have been unbanned",
+                    description=f"You have been unbanned from {ctx.guild.name}." + (f"\nReason: {reason}" if reason else ""),
+                    color=discord.Color.green()
+                )
+                await user.send(embed=embed)
+            except Exception as e:
+                await ctx.send(f"Could not send DM to {user.mention}. They might have DMs disabled.")
         except Exception as e:
             await ctx.send(f'Failed to unban {user.mention}. Error: {e}')
 
@@ -116,6 +131,15 @@ class Moderation(commands.Cog):
         try:
             await member.remove_roles(muted_role)
             await ctx.send(f'{member.mention} has been unmuted.')
+            try:
+                embed = discord.Embed(
+                    title="You have been unmuted",
+                    description=f"You have been unmuted in {ctx.guild.name}.",
+                    color=discord.Color.green()
+                )
+                await member.send(embed=embed)
+            except Exception as e:
+                await ctx.send(f"Could not send DM to {member.mention}. They might have DMs disabled.")
         except Exception as e:
             await ctx.send(f'Failed to unmute {member.mention}. Error: {e}')
 
@@ -128,6 +152,15 @@ class Moderation(commands.Cog):
             return
         try:
             await ctx.send(f'{member.mention}, you have been warned. Reason: {reason}')
+            try:
+                embed = discord.Embed(
+                    title="You have been warned",
+                    description=f"You have been warned in {ctx.guild.name}. Reason: {reason}",
+                    color=discord.Color.gold()
+                )
+                await member.send(embed=embed)
+            except Exception as e:
+                await ctx.send(f"Could not send DM to {member.mention}. They might have DMs disabled.")
             # Optionally, log the warning to a channel or file here
         except Exception as e:
             await ctx.send(f'Failed to warn {member.mention}. Error: {e}')
@@ -151,6 +184,7 @@ class Moderation(commands.Cog):
             await ctx.send('Slow mode disabled.')
         except Exception as e:
             await ctx.send(f'Failed to disable slow mode. Error: {e}')
+
 
     @commands.command(name='lock')
     @commands.has_permissions(manage_channels=True)
