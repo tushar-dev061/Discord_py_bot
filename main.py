@@ -4,6 +4,22 @@ import os
 import asyncio
 import B
 from dotenv import load_dotenv
+import zipfile
+import gdown
+import os
+
+FILE_ID = "1umW5zlZSegWtFbbdfpwPBGy8f0ANTNEk"
+URL = f"https://drive.google.com/uc?id={FILE_ID}"
+
+OUTPUT = "ffmpeg.zip"
+
+os.makedirs("ffmpeg_dl", exist_ok=True)
+gdown.download(URL, os.path.join("ffmpeg_dl", OUTPUT), quiet=False)
+
+zip_path = os.path.join("ffmpeg_dl", OUTPUT)
+with zipfile.ZipFile(zip_path) as z:
+    z.extractall("ffmpeg")
+
 
 # Load .env file for token
 load_dotenv()
@@ -13,7 +29,7 @@ intents.message_content = True
 intents.guilds = True
 intents.members = True
 
-client = commands.Bot(command_prefix='-', intents=intents, help_command=None)
+client = commands.Bot(command_prefix='+', intents=intents, help_command=None)
 
 # Start Flask server
 B.b()
