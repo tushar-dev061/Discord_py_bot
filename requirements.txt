@@ -3,4 +3,5 @@ asyncio
 flask
 yt_dlp
 PyNaCl
+gdown
 dotenv
