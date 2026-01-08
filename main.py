@@ -20,7 +20,7 @@ intents.members = True
 
 # ===================== BOT =====================
 bot = commands.Bot(
-    command_prefix="+",
+    command_prefix="-",
     intents=intents,
     help_command=None
 )
@@ -133,3 +133,4 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+
