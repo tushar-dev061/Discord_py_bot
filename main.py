@@ -118,7 +118,7 @@ async def help_command(ctx):
         embed.add_field(
             name=cog,
             value="\n".join(
-                f"+{cmd.name} → {cmd.help or 'No description'}"
+                f"{command_prefix}{cmd.name} → {cmd.help or 'No description'}"
                 for cmd in cmds
             ),
             inline=False
@@ -133,4 +133,5 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+
 
