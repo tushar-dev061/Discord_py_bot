@@ -2,128 +2,134 @@ import discord
 from discord.ext import commands
 import os
 import asyncio
-import B
 from dotenv import load_dotenv
-import zipfile
-import gdown
-import os
+import B  # your Flask keep-alive file
 
-FILE_ID = "1umW5zlZSegWtFbbdfpwPBGy8f0ANTNEk"
-URL = f"https://drive.google.com/uc?id={FILE_ID}"
-
-OUTPUT = "ffmpeg.zip"
-
-os.makedirs("ffmpeg_dl", exist_ok=True)
-gdown.download(URL, os.path.join("ffmpeg_dl", OUTPUT), quiet=False)
-
-zip_path = os.path.join("ffmpeg_dl", OUTPUT)
-with zipfile.ZipFile(zip_path) as z:
-    z.extractall("ffmpeg")
-
-
-# Load .env file for token
+# ===================== ENV =====================
 load_dotenv()
 
+TOKEN = os.getenv("TOKEN")
+if not TOKEN:
+    raise RuntimeError("❌ TOKEN not found in environment variables")
+
+# ===================== INTENTS =====================
 intents = discord.Intents.default()
 intents.message_content = True
 intents.guilds = True
 intents.members = True
 
-client = commands.Bot(command_prefix='+', intents=intents, help_command=None)
+# ===================== BOT =====================
+bot = commands.Bot(
+    command_prefix="+",
+    intents=intents,
+    help_command=None
+)
 
-# Start Flask server
+# ===================== KEEP ALIVE =====================
 B.b()
 
+# ===================== EXTENSION LOADER =====================
 async def load_extensions():
-    print("Starting to load command extensions...")
-    for filename in os.listdir('./commands'):
-        if filename.endswith('.py') and filename != '__init__.py':
-            ext = f'commands.{filename[:-3]}'
+    print("📦 Loading command extensions...")
+    for filename in os.listdir("./commands"):
+        if filename.endswith(".py") and filename != "__init__.py":
+            ext = f"commands.{filename[:-3]}"
             try:
-                await client.load_extension(ext)
-                print(f"Loaded: {ext}")
+                await bot.load_extension(ext)
+                print(f"✅ Loaded: {ext}")
             except Exception as e:
-                print(f"Failed to load {ext}: {e}")
-    print("Finished loading command extensions.")
+                print(f"❌ Failed to load {ext}: {e}")
+    print("🚀 All extensions loaded")
 
-@client.event
+# ===================== EVENTS =====================
+@bot.event
 async def on_ready():
-    print(f'Logged in as {client.user} (ID: {client.user.id})')
-    await client.change_presence(activity=discord.Activity(
-        type=discord.ActivityType.watching, name="UNIQUE"))
+    print(f"🤖 Logged in as {bot.user} (ID: {bot.user.id})")
+    await bot.change_presence(
+        activity=discord.Activity(
+            type=discord.ActivityType.watching,
+            name="UNIQUE"
+        )
+    )
 
-@client.event
+@bot.event
 async def on_message(message: discord.Message):
-    # Custom mention reply
-    if (not message.author.bot and
-        not message.mention_everyone and
-        client.user in message.mentions):
+    if (
+        not message.author.bot
+        and bot.user in message.mentions
+        and not message.mention_everyone
+    ):
         try:
             await message.channel.send(
-                f"Hii {message.author.mention}! Use `-help` to get commands list."
+                f"Hi {message.author.mention}! Use `+help` to see commands."
             )
         except Exception as e:
-            print(f"Failed to reply: {e}")
+            print("Reply failed:", e)
 
-    await client.process_commands(message)
+    await bot.process_commands(message)
 
-@client.command(name="reload")
+# ===================== OWNER COMMANDS =====================
+@bot.command()
 @commands.is_owner()
-async def reload_cmd(ctx, extension: str = None):
+async def reload(ctx, extension: str = None):
     if extension:
         try:
-            await client.unload_extension(f"commands.{extension}")
-            await client.load_extension(f"commands.{extension}")
-            await ctx.send(f"Reloaded: {extension}")
+            await bot.unload_extension(f"commands.{extension}")
+            await bot.load_extension(f"commands.{extension}")
+            await ctx.send(f"♻ Reloaded `{extension}`")
         except Exception as e:
-            await ctx.send(f"Failed to reload {extension}: {e}")
+            await ctx.send(f"❌ {e}")
     else:
-        for filename in os.listdir('./commands'):
-            if filename.endswith('.py') and filename != '__init__.py':
-                ext = f'commands.{filename[:-3]}'
+        for filename in os.listdir("./commands"):
+            if filename.endswith(".py") and filename != "__init__.py":
+                ext = f"commands.{filename[:-3]}"
                 try:
-                    await client.unload_extension(ext)
-                    await client.load_extension(ext)
+                    await bot.unload_extension(ext)
+                    await bot.load_extension(ext)
                 except Exception as e:
-                    await ctx.send(f"Failed: {ext} -> {e}")
-        await ctx.send("Reload complete.")
+                    await ctx.send(f"❌ {ext}: {e}")
+        await ctx.send("✅ All extensions reloaded")
 
-@client.command(name="load")
+@bot.command()
 @commands.is_owner()
-async def load_cmd(ctx, extension: str):
+async def load(ctx, extension: str):
     try:
-        await client.load_extension(f"commands.{extension}")
-        await ctx.send(f"Loaded: {extension}")
+        await bot.load_extension(f"commands.{extension}")
+        await ctx.send(f"✅ Loaded `{extension}`")
     except Exception as e:
-        await ctx.send(f"Failed to load {extension}: {e}")
+        await ctx.send(f"❌ {e}")
 
-@client.command(name="help")
+# ===================== HELP =====================
+@bot.command(name="help")
 async def help_command(ctx):
     embed = discord.Embed(
         title="Help Menu",
-        description="List of available commands",
+        description="Available Commands",
         color=discord.Color.blue()
     )
-    
+
     cogs = {}
-    for command in client.commands:
-        if not command.hidden:
-            cog = command.cog_name or "General"
-            cogs.setdefault(cog, []).append(command)
+    for cmd in bot.commands:
+        if not cmd.hidden:
+            cog = cmd.cog_name or "General"
+            cogs.setdefault(cog, []).append(cmd)
 
     for cog, cmds in cogs.items():
-        cmd_list = "\n".join(f"-{cmd.name} → {cmd.help or 'No description'}" for cmd in cmds)
-        embed.add_field(name=cog, value=cmd_list, inline=False)
+        embed.add_field(
+            name=cog,
+            value="\n".join(
+                f"+{cmd.name} → {cmd.help or 'No description'}"
+                for cmd in cmds
+            ),
+            inline=False
+        )
 
     await ctx.send(embed=embed)
 
+# ===================== MAIN =====================
 async def main():
     await load_extensions()
-    token = os.getenv("TOKEN")
-    if not token:
-        print("❌ TOKEN missing in .env")
-        return
-    await client.start(token)
+    await bot.start(TOKEN)
 
 if __name__ == "__main__":
     asyncio.run(main())
